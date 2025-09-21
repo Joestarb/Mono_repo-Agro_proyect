@@ -1,0 +1,18 @@
+{
+  "name": "@agro-project/common",
+  "version": "1.0.0",
+  "description": "Common utilities and DTOs for Agro Project",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
