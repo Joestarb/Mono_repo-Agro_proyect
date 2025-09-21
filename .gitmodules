@@ -1,0 +1,6 @@
+[submodule "apps/auth-service"]
+	path = apps/auth-service
+	url = https://github.com/Joestarb/agro-repo-auth
+[submodule "apps/gateway"]
+	path = apps/gateway
+	url = https://github.com/Joestarb/agro-repo-gateway

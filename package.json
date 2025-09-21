@@ -1,0 +1,16 @@
+{
+  "name": "agro-project",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev --concurrency 4",
+    "build": "turbo run build",
+    "start": "turbo run start"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2"
+  }
+}
