@@ -82,7 +82,6 @@ start_services() {
     echo ""
     echo "📍 URLs disponibles:"
     echo "  • Gateway: http://localhost:3000"
-    echo "  • Auth Service: http://localhost:3001"
     echo "  • PostgreSQL: localhost:5432"
     echo ""
     echo "💡 Usa './dev.sh logs' para ver los logs"
