@@ -4,3 +4,6 @@
 [submodule "apps/gateway"]
 	path = apps/gateway
 	url = https://github.com/Joestarb/agro-repo-gateway
+[submodule "apps/agro-repo-frontend"]
+	path = apps/agro-repo-frontend
+	url = git@github.com:Joestarb/agro-repo-frontend.git

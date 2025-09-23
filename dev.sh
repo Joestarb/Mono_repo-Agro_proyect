@@ -62,7 +62,10 @@ install_dependencies() {
     
     echo "  • Dependencias del gateway..."
     cd apps/gateway && pnpm install && cd ../..
-    
+
+    echo "  • Dependencias del Frontend..."
+    cd apps/agro-repo-frontend && pnpm install && cd ../..
+
     echo "✅ Dependencias instaladas"
 }
 
@@ -83,6 +86,7 @@ start_services() {
     echo "📍 URLs disponibles:"
     echo "  • Gateway: http://localhost:3000"
     echo "  • PostgreSQL: localhost:5432"
+    echo "  • Frontend: http://localhost:5001"
     echo ""
     echo "💡 Usa './dev.sh logs' para ver los logs"
 }

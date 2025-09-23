@@ -74,6 +74,27 @@ services:
       - ./apps/gateway/src:/app/apps/gateway/src
     restart: unless-stopped
 
+  # Frontend
+  agro-repo-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/agro-repo-frontend/dockerfile
+    container_name: agro_frontend
+    ports:
+      - "${FRONTEND_EXTERNAL_PORT}:3000"
+    environment:
+      # URL del Gateway API
+      GATEWAY_URL: ${GATEWAY_URL}
+      # Configuración del servicio
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${FRONTEND_PORT}
+    depends_on:
+      - gateway
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/agro-repo-frontend/src:/app/apps/agro-repo-frontend/src
+    restart: unless-stopped
 # Volúmenes
 volumes:
   postgres_data:
