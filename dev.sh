@@ -86,7 +86,7 @@ start_services() {
     echo "📍 URLs disponibles:"
     echo "  • Gateway: http://localhost:3000"
     echo "  • PostgreSQL: localhost:5432"
-    echo "  • Frontend: http://localhost:5001"
+    echo "  • Frontend: http://localhost:5173"
     echo ""
     echo "💡 Usa './dev.sh logs' para ver los logs"
 }

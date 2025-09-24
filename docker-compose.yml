@@ -81,19 +81,21 @@ services:
       dockerfile: ./apps/agro-repo-frontend/dockerfile
     container_name: agro_frontend
     ports:
-      - "${FRONTEND_EXTERNAL_PORT}:3000"
+      - "${FRONTEND_EXTERNAL_PORT:-5173}:5173"  # Cambiar a puerto 5173
     environment:
       # URL del Gateway API
-      GATEWAY_URL: ${GATEWAY_URL}
+      VITE_GATEWAY_URL: ${GATEWAY_URL:-http://localhost:3001}
       # Configuración del servicio
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${FRONTEND_PORT}
+      NODE_ENV: ${NODE_ENV:-development}
     depends_on:
       - gateway
     networks:
       - agro_network
     volumes:
       - ./apps/agro-repo-frontend/src:/app/apps/agro-repo-frontend/src
+      - ./apps/agro-repo-frontend/public:/app/apps/agro-repo-frontend/public
+      - ./apps/agro-repo-frontend/index.html:/app/apps/agro-repo-frontend/index.html
+      - ./apps/agro-repo-frontend/vite.config.ts:/app/apps/agro-repo-frontend/vite.config.ts
     restart: unless-stopped
 # Volúmenes
 volumes:
