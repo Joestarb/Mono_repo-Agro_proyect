@@ -1,0 +1,108 @@
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: agro_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agro_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Servicio de autenticación
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./apps/auth-service/dockerfile
+    container_name: agro_auth_service
+    ports:
+      - "${AUTH_SERVICE_EXTERNAL_PORT}:3000"
+    environment:
+      # Base de datos
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      # Configuración del servicio
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${AUTH_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/auth-service/src:/app/apps/auth-service/src
+    restart: unless-stopped
+
+  # Gateway API
+  gateway:
+    build:
+      context: .
+      dockerfile: ./apps/gateway/dockerfile
+    container_name: agro_gateway
+    ports:
+      - "${GATEWAY_EXTERNAL_PORT}:3000"
+    environment:
+      # Servicios
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      # JWT (mismo secreto que auth-service)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      # Configuración del servicio
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${GATEWAY_PORT}
+    depends_on:
+      - auth-service
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/gateway/src:/app/apps/gateway/src
+    restart: unless-stopped
+
+  # Frontend
+  agro-repo-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/agro-repo-frontend/dockerfile
+    container_name: agro_frontend
+    ports:
+      - "${FRONTEND_EXTERNAL_PORT:-5173}:5173"  # Cambiar a puerto 5173
+    environment:
+      # URL del Gateway API
+      VITE_GATEWAY_URL: ${GATEWAY_URL:-http://localhost:3001}
+      # Configuración del servicio
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      - gateway
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/agro-repo-frontend/src:/app/apps/agro-repo-frontend/src
+      - ./apps/agro-repo-frontend/public:/app/apps/agro-repo-frontend/public
+      - ./apps/agro-repo-frontend/index.html:/app/apps/agro-repo-frontend/index.html
+      - ./apps/agro-repo-frontend/vite.config.ts:/app/apps/agro-repo-frontend/vite.config.ts
+    restart: unless-stopped
+# Volúmenes
+volumes:
+  postgres_data:
+    driver: local
+
+# Redes
+networks:
+  agro_network:
+    driver: bridge
