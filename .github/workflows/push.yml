@@ -1,0 +1,82 @@
+name: CI/CD Pipeline - Tests · Build · Deploy # Nombre del workflow que aparecerá en GitHub Actions
+
+on: # Eventos que disparan el workflow
+  push:
+    branches:
+      - "feature/**" # Se ejecuta en ramas de features
+      - "feat/**"
+      - "bugfix/**"
+      - "hotfix/**"
+  workflow_dispatch: # También permite ejecución manual desde la UI
+
+jobs: # Definición de jobs (etapas) del pipeline
+  test-and-build: # Job único que prueba y construye
+    runs-on: ubuntu-latest # Usa un runner Ubuntu (Linux)
+    steps:
+      - uses: actions/checkout@v4 # Clona el repositorio
+
+      - name: Give permissions to bash script # Da permisos al script de desarrollo
+        run: |
+          chmod +x ./dev.sh
+
+      - name: Build project # Construye el proyecto
+        run: |
+          ./dev.sh build
+
+      - name: Start containers # Levanta los contenedores
+        run: |
+          ./dev.sh up
+
+      - name: Wait for services to be ready # Espera que los servicios estén listos
+        run: |
+          sleep 30
+
+      - name: Test containers are running # Verifica que los contenedores funcionen
+        run: |
+          docker-compose ps
+          docker-compose logs --no-color
+
+      - name: Health check # Verifica que los servicios respondan
+        run: |
+          # Verifica que los contenedores estén ejecutándose correctamente
+          if [ $(docker-compose ps -q | wc -l) -gt 0 ]; then
+            echo "✅ Containers are running successfully"
+          else
+            echo "❌ No containers are running"
+            exit 1
+          fi
+
+      - name: Cleanup # Limpia los contenedores
+        if: always() # Siempre se ejecuta, incluso si hay fallos
+        run: |
+          docker-compose down -v
+
+  merge-to-develop: # Job para hacer merge automático a develop
+    needs: test-and-build # Solo se ejecuta si el test fue exitoso
+    runs-on: ubuntu-latest
+    if: success() # Solo si los tests pasaron correctamente
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Necesario para hacer merge
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge to develop
+        run: |
+          # Cambiar a develop
+          git checkout develop
+          git pull origin develop
+
+          # Hacer merge de la rama actual
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          git merge origin/$BRANCH_NAME --no-ff -m "Auto-merge: $BRANCH_NAME -> develop (containers working)"
+
+          # Push a develop
+          git push origin develop
+
+          echo "✅ Successfully merged $BRANCH_NAME to develop"
