@@ -97,6 +97,32 @@ services:
       - ./apps/agro-repo-frontend/index.html:/app/apps/agro-repo-frontend/index.html
       - ./apps/agro-repo-frontend/vite.config.ts:/app/apps/agro-repo-frontend/vite.config.ts
     restart: unless-stopped
+
+  # Servicio de parcelas
+  agro-repo-plots:
+    build:
+      context: .
+      dockerfile: ./apps/agro-repo-plots/Dockerfile
+    container_name: agro_plots_service
+    ports:
+      - "3002:3000"
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      NODE_ENV: ${NODE_ENV}
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/agro-repo-plots/src:/app/apps/agro-repo-plots/src
+    restart: unless-stopped
+
 # Volúmenes
 volumes:
   postgres_data:
