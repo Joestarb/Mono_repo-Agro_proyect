@@ -19,6 +19,71 @@ services:
       timeout: 5s
       retries: 5
 
+  # Base de datos MongoDB
+  mongo:
+    image: mongo:6
+    container_name: agro_mongo
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - "${MONGO_EXTERNAL_PORT}:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - agro_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--username", "${MONGO_USER}", "--password", "${MONGO_PASSWORD}", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Servicio de ingestión de datos
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: ./apps/agro-repo-ingestion/Dockerfile
+    container_name: agro_ingestion
+    environment:
+      MONGODB_URI: ${MONGODB_URI}
+      DB_NAME: ${DB_NAME}
+      API_BASE_URL: ${API_BASE_URL}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/agro-repo-ingestion/src:/app/apps/agro-repo-ingestion/src
+    restart: unless-stopped
+
+  # Servicio de gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: ./apps/gateway/dockerfile
+    container_name: agro_gateway
+    ports:
+      - "${GATEWAY_EXTERNAL_PORT}:3000"
+    environment:
+      MONGODB_URI: ${MONGODB_URI}
+      DB_NAME: ${DB_NAME}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${GATEWAY_PORT}
+    depends_on:
+      - auth-service
+      - ingestion-service
+    networks:
+      - agro_network
+    volumes:
+      - ./apps/gateway/src:/app/apps/gateway/src
+    restart: unless-stopped
+
   # Servicio de autenticación
   auth-service:
     build:
@@ -28,16 +93,13 @@ services:
     ports:
       - "${AUTH_SERVICE_EXTERNAL_PORT}:3000"
     environment:
-      # Base de datos
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
-      # Configuración del servicio
       NODE_ENV: ${NODE_ENV}
       PORT: ${AUTH_SERVICE_PORT}
     depends_on:
@@ -49,31 +111,6 @@ services:
       - ./apps/auth-service/src:/app/apps/auth-service/src
     restart: unless-stopped
 
-  # Gateway API
-  gateway:
-    build:
-      context: .
-      dockerfile: ./apps/gateway/dockerfile
-    container_name: agro_gateway
-    ports:
-      - "${GATEWAY_EXTERNAL_PORT}:3000"
-    environment:
-      # Servicios
-      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
-      # JWT (mismo secreto que auth-service)
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION}
-      # Configuración del servicio
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${GATEWAY_PORT}
-    depends_on:
-      - auth-service
-    networks:
-      - agro_network
-    volumes:
-      - ./apps/gateway/src:/app/apps/gateway/src
-    restart: unless-stopped
-
   # Frontend
   agro-repo-frontend:
     build:
@@ -81,11 +118,9 @@ services:
       dockerfile: ./apps/agro-repo-frontend/dockerfile
     container_name: agro_frontend
     ports:
-      - "${FRONTEND_EXTERNAL_PORT:-5173}:5173"  # Cambiar a puerto 5173
+      - "${FRONTEND_EXTERNAL_PORT:-5173}:5173"
     environment:
-      # URL del Gateway API
       VITE_GATEWAY_URL: ${GATEWAY_URL:-http://localhost:3001}
-      # Configuración del servicio
       NODE_ENV: ${NODE_ENV:-development}
     depends_on:
       - gateway
@@ -126,6 +161,8 @@ services:
 # Volúmenes
 volumes:
   postgres_data:
+    driver: local
+  mongo_data:
     driver: local
 
 # Redes
