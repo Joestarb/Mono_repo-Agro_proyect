@@ -1,4 +1,13 @@
-export { SensorEventSchema } from './sensor-event.schema';
-export { LatestReadingSchema } from './latest-reading.schema';
+// SensorEvent
+export {
+  SensorEventSchema,
+  type SensorEvent,
+  type SensorEventDocument,
+} from './sensor-event.schema';
 
-export type { LatestReadingDocument } from './types/latest-reading.types';
+// LatestReading
+export {
+  LatestReadingSchema,
+  type LatestReading,
+  type LatestReadingDocument,
+} from './latest-reading.schema';

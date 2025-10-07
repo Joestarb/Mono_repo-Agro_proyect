@@ -1,10 +1,9 @@
-// packages/schemas/src/sensor-event.schema.ts
-import { Schema } from 'mongoose';
+import { Schema, Document } from 'mongoose';
 
 export const SensorEventSchema = new Schema({
-  sensorType: { type: String, index: true, required: true }, // 'temperatura', 'humedad', etc.
-  sensorId:    { type: String, index: true, required: true }, // id estable por sensor
-  ts:          { type: Date,   index: true, required: true }, // timestamp lectura
+  sensorType: { type: String, index: true, required: true },
+  sensorId:    { type: String, index: true, required: true },
+  ts:          { type: Date,   index: true, required: true },
   value:       { type: Number, required: true },
   source:      { type: String, default: 'sensores-async-api' },
   payloadHash: { type: String, index: true },
@@ -13,3 +12,16 @@ export const SensorEventSchema = new Schema({
 
 SensorEventSchema.index({ sensorType: 1, sensorId: 1, ts: 1 }, { unique: true });
 SensorEventSchema.index({ sensorType: 1, ts: 1 });
+SensorEventSchema.index({ receivedAt: 1 }, { expireAfterSeconds: 60 * 5 }); // TTL
+
+export interface SensorEvent {
+  sensorType: string;
+  sensorId: string;
+  ts: Date;
+  value: number;
+  source?: string;
+  payloadHash?: string;
+  receivedAt?: Date;
+}
+
+export type SensorEventDocument = SensorEvent & Document;

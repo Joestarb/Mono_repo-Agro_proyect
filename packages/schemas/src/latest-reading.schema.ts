@@ -1,4 +1,4 @@
-import { Schema } from 'mongoose';
+import { Schema, Document } from 'mongoose';
 
 export const LatestReadingSchema = new Schema({
   sensorType:  { type: String, required: true },
@@ -10,3 +10,14 @@ export const LatestReadingSchema = new Schema({
 }, { versionKey: false });
 
 LatestReadingSchema.index({ sensorType: 1, sensorId: 1 }, { unique: true });
+
+export interface LatestReading {
+  sensorType: string;
+  sensorId: string;
+  ts: Date;
+  value: number;
+  payloadHash?: string;
+  updatedAt?: Date;
+}
+
+export type LatestReadingDocument = LatestReading & Document;
