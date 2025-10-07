@@ -10,3 +10,6 @@
 [submodule "apps/agro-repo-plots"]
 	path = apps/agro-repo-plots
 	url = git@github.com:Joestarb/agro-repo-plots.git
+[submodule "apps/agro-repo-ingestion"]
+	path = apps/agro-repo-ingestion
+	url = https://github.com/Joestarb/agro-repo-gestion.git

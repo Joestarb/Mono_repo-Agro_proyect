@@ -7,8 +7,15 @@
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+
+    // 🔑 Ajustes clave para evitar los errores
     "target": "ES2020",
     "module": "commonjs",
-    "strict": true
+    "lib": ["ES2020"],
+    "types": ["node"],
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   }
 }

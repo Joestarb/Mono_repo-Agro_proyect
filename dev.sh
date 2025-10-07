@@ -13,19 +13,24 @@ show_help() {
     echo "Uso: ./dev.sh [comando]"
     echo ""
     echo "Comandos disponibles:"
-    echo "  up        - Levantar todos los servicios"
-    echo "  down      - Detener todos los servicios"
-    echo "  restart   - Reiniciar todos los servicios"
-    echo "  logs      - Ver logs de todos los servicios"
-    echo "  db-reset  - Reiniciar la base de datos"
-    echo "  build     - Construir las imágenes de Docker"
-    echo "  install   - Instalar dependencias en todos los servicios"
-    echo "  help      - Mostrar esta ayuda"
+    echo "  up                - Levantar todos los servicios"
+    echo "  down              - Detener todos los servicios"
+    echo "  restart           - Reiniciar todos los servicios"
+    echo "  logs [servicio]   - Ver logs de todos o de un servicio"
+    echo "  db-reset          - Reiniciar la base de datos Postgres"
+    echo "  mongo-shell       - Abrir shell interactivo de MongoDB"
+    echo "  mongo-reset       - Reiniciar la base de datos MongoDB"
+    echo "  ingestion-logs    - Ver logs del ingestion-service"
+    echo "  restart-ingestion - Reiniciar solo el ingestion-service"
+    echo "  build             - Construir las imágenes de Docker"
+    echo "  install           - Instalar dependencias en todos los servicios"
+    echo "  help              - Mostrar esta ayuda"
     echo ""
     echo "Ejemplos:"
     echo "  ./dev.sh up"
     echo "  ./dev.sh logs auth-service"
-    echo "  ./dev.sh db-reset"
+    echo "  ./dev.sh mongo-shell"
+    echo "  ./dev.sh restart-ingestion"
 }
 
 # Función para verificar prerequisitos
@@ -57,14 +62,17 @@ install_dependencies() {
     echo "  • Dependencias raíz..."
     pnpm install
     
-    echo "  • Dependencias del auth-service..."
+    echo "  • Auth-service..."
     cd apps/auth-service && pnpm install && cd ../..
     
-    echo "  • Dependencias del gateway..."
+    echo "  • Gateway..."
     cd apps/gateway && pnpm install && cd ../..
 
-    echo "  • Dependencias del Frontend..."
+    echo "  • Frontend..."
     cd apps/agro-repo-frontend && pnpm install && cd ../..
+
+    echo "  • Ingestion-service..."
+    cd apps/agro-repo-ingestion && pnpm install && cd ../..
 
     echo "✅ Dependencias instaladas"
 }
@@ -87,6 +95,7 @@ start_services() {
     echo "  • Gateway: http://localhost:3000"
     echo "  • PostgreSQL: localhost:5432"
     echo "  • Frontend: http://localhost:5173"
+    echo "  • MongoDB: localhost:27017"
     echo ""
     echo "💡 Usa './dev.sh logs' para ver los logs"
 }
@@ -117,51 +126,59 @@ show_logs() {
     fi
 }
 
-# Función para resetear la base de datos
+# Función para resetear la base de datos Postgres
 reset_database() {
-    echo "🗄️  Reseteando base de datos..."
+    echo "🗄️  Reseteando base de datos Postgres..."
     docker-compose down postgres
     docker volume rm agro-project_postgres_data || true
     docker-compose up -d postgres
-    echo "✅ Base de datos reseteada"
+    echo "✅ Base de datos Postgres reseteada"
+}
+
+# Función para abrir shell de MongoDB
+mongo_shell() {
+    echo "🍃 Abriendo shell de MongoDB..."
+    docker exec -it agro_mongo mongosh -u $MONGO_USER -p $MONGO_PASSWORD --authenticationDatabase admin
+}
+
+# Función para resetear MongoDB
+reset_mongo() {
+    echo "🗄️  Reseteando base de datos MongoDB..."
+    docker-compose down mongo
+    docker volume rm agro-project_mongo_data || true
+    docker-compose up -d mongo
+    echo "✅ Base de datos MongoDB reseteada"
+}
+
+# Función para logs del ingestion-service
+ingestion_logs() {
+    echo "📡 Logs del ingestion-service..."
+    docker logs -f agro_ingestion
+}
+
+# Función para reiniciar ingestion-service
+restart_ingestion() {
+    echo "🔄 Reiniciando ingestion-service..."
+    docker-compose restart ingestion-service
+    echo "✅ ingestion-service reiniciado"
 }
 
 # Función principal
 main() {
     case "${1:-}" in
-        "up")
-            check_prerequisites
-            start_services
-            ;;
-        "down")
-            stop_services
-            ;;
-        "restart")
-            restart_services
-            ;;
-        "logs")
-            show_logs "$@"
-            ;;
-        "db-reset")
-            reset_database
-            ;;
-        "build")
-            check_prerequisites
-            build_images
-            ;;
-        "install")
-            check_prerequisites
-            install_dependencies
-            ;;
-        "help"|"--help"|"-h")
-            show_help
-            ;;
-        *)
-            echo "❌ Comando desconocido: ${1:-}"
-            echo ""
-            show_help
-            exit 1
-            ;;
+        "up")            check_prerequisites; start_services ;;
+        "down")          stop_services ;;
+        "restart")       restart_services ;;
+        "logs")          show_logs "$@" ;;
+        "db-reset")      reset_database ;;
+        "mongo-shell")   mongo_shell ;;
+        "mongo-reset")   reset_mongo ;;
+        "ingestion-logs") ingestion_logs ;;
+        "restart-ingestion") restart_ingestion ;;
+        "build")         check_prerequisites; build_images ;;
+        "install")       check_prerequisites; install_dependencies ;;
+        "help"|"--help"|"-h") show_help ;;
+        *) echo "❌ Comando desconocido: ${1:-}"; echo ""; show_help; exit 1 ;;
     esac
 }
 

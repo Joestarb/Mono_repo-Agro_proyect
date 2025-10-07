@@ -1,0 +1,113 @@
+name: Auto Pull Request to main
+
+on:
+  push:
+    branches:
+      - "develop"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Docker and Docker Compose
+        run: |
+          docker --version
+          docker compose version
+          echo "✅ Docker y Docker Compose configurados"
+
+      - name: Create .env file from example
+        run: |
+          if [ -f local.example.env ]; then
+            cp local.example.env .env
+            # Configurar valores requeridos para el build
+            sed -i 's/JWT_SECRET=$/JWT_SECRET=test_secret_key_for_ci_build_only/' .env
+            sed -i 's/API_BASE_URL=$/API_BASE_URL=http:\/\/localhost:3000/' .env
+            sed -i 's/POLL_INTERVAL_MS=$/POLL_INTERVAL_MS=60000/' .env
+            sed -i 's/MONGODB_URI=$/MONGODB_URI=mongodb:\/\/agro_user:agro_password@mongo:27017\/agro_sensors?authSource=admin/' .env
+            sed -i 's/DB_NAME=$/DB_NAME=agro_sensors/' .env
+            echo "✅ Archivo .env creado y configurado"
+          else
+            echo "❌ No se encontró local.example.env"
+            exit 1
+          fi
+
+      - name: Build Docker images with docker compose
+        run: |
+          echo "🏗️ Construyendo imágenes con docker compose build..."
+          docker compose build
+          echo "✅ Build completado exitosamente"
+
+      - name: Verify built images
+        run: |
+          echo "📦 Imágenes construidas:"
+          docker images | grep -E "agro|REPOSITORY" || true
+          echo ""
+          echo "✅ Verificación completada"
+
+  create-pr:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request to main (if branch is ahead)
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = process.env.GITHUB_REF.replace('refs/heads/','');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            core.info(`Branch detected: ${branch}`);
+
+            // Compare branch with main to check if there are commits ahead
+            const comparison = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base: 'main',
+              head: branch
+            });
+
+            if (!comparison || comparison.data.ahead_by === 0) {
+              core.info('No hay commits únicos frente a main; no se creará PR.');
+              return;
+            }
+
+            // Check if an open PR already exists from this branch to main
+            const { data: prs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              head: `${owner}:${branch}`,
+              base: 'main'
+            });
+
+            if (prs.length > 0) {
+              core.info(`Ya existe un PR abierto: ${prs[0].html_url}`);
+              return;
+            }
+
+            // Create the PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner,
+              repo,
+              head: branch,
+              base: 'main',
+              title: `Auto PR to main - ${branch}`,
+              body: 'This PR was created automatically from a feature branch towards main.'
+            });
+
+            core.info(`PR creado: ${pr.html_url}`);
