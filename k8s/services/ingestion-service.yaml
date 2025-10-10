@@ -1,0 +1,68 @@
+# Deployment del Ingestion Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion-service
+  namespace: default
+  labels:
+    app: ingestion-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestion-service
+  template:
+    metadata:
+      labels:
+        app: ingestion-service
+    spec:
+      containers:
+      - name: ingestion-service
+        image: agro-ingestion-service:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: agro-secrets
+              key: MONGODB_URI
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: agro-config
+              key: DB_NAME
+        - name: API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: agro-config
+              key: API_BASE_URL
+        - name: POLL_INTERVAL_MS
+          valueFrom:
+            configMapKeyRef:
+              name: agro-config
+              key: POLL_INTERVAL_MS
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+# Service del Ingestion Service (si necesita comunicación interna)
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion-service
+  namespace: default
+  labels:
+    app: ingestion-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: ingestion-service

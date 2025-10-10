@@ -1,0 +1,27 @@
+# ConfigMap con configuraciones generales (no sensibles)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agro-config
+  namespace: default
+data:
+  # PostgreSQL
+  POSTGRES_DB: "agro_db"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  
+  # MongoDB
+  MONGO_DB: "agro_sensors"
+  DB_NAME: "agro_sensors"
+  
+  # URLs de servicios internos
+  AUTH_SERVICE_URL: "http://auth-service:3000"
+  API_BASE_URL: "http://ingestion-service:3000"
+  GATEWAY_URL: "http://gateway:3000"
+  
+  # Configuraciones de aplicación
+  NODE_ENV: "production"
+  GATEWAY_PORT: "3000"
+  AUTH_SERVICE_PORT: "3000"
+  POLL_INTERVAL_MS: "30000"
+  JWT_EXPIRATION: "1h"
